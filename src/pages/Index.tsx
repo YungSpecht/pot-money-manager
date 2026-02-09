@@ -1,15 +1,22 @@
-import { useAccountStore } from '@/hooks/useAccountStore';
-import { SetupScreen } from '@/components/SetupScreen';
-import { Dashboard } from '@/components/Dashboard';
+import {useAccountStore} from '@/hooks/useAccountStore';
+import {SetupScreen} from '@/components/SetupScreen';
+import {Dashboard} from '@/components/Dashboard';
+import {useEffect} from 'react';
 
 const Index = () => {
-  const store = useAccountStore();
+    const store = useAccountStore();
 
-  if (!store.data.setupComplete) {
-    return <SetupScreen onComplete={store.completeSetup} />;
-  }
+    useEffect(() => {
+        if(store.data.setupComplete) {
+            store.triggerMonthlyTransferIfDue();
+        }
+    }, [store]);
 
-  return <Dashboard {...store} />;
+    if (!store.data.setupComplete) {
+        return <SetupScreen onComplete={store.completeSetup}/>;
+    }
+
+    return <Dashboard {...store} />;
 };
 
 export default Index;
