@@ -1,0 +1,16 @@
+{
+  "name": "Money Pots",
+  "short_name": "MoneyPots",
+  "description": "Virtual sub-account manager for your reserve account",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1729",
+  "theme_color": "#1a9a7a",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
