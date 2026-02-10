@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/components/ui/sheet';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
@@ -24,9 +24,11 @@ export function MonthlyTransferSheet({
                                      }: Props) {
     const [total, setTotal] = useState(data.monthlyTransfer.totalAmount.toString());
     const [splits, setSplits] = useState<SplitRule[]>(data.monthlyTransfer.splits);
+    const prevOpen = useRef(false);
 
     useEffect(() => {
-        if (open) {
+        // Only reset state when sheet transitions from closed to open
+        if (open && !prevOpen.current) {
             setTotal(data.monthlyTransfer.totalAmount.toString());
             setSplits(data.monthlyTransfer.splits.length > 0 ? data.monthlyTransfer.splits : data.pots.map(p => ({
                 potId: p.id,
@@ -34,6 +36,7 @@ export function MonthlyTransferSheet({
                 value: 0
             })));
         }
+        prevOpen.current = open;
     }, [open, data]);
 
     const updateSplit = (potId: string, field: keyof SplitRule, value: string | number) => {
@@ -96,7 +99,8 @@ export function MonthlyTransferSheet({
                                     <Input
                                         type="number"
                                         className="w-24 h-8 text-sm"
-                                        value={rule?.value ?? 0}
+                                        value={rule?.value}
+                                        placeholder="0"
                                         onChange={e => updateSplit(pot.id, 'value', e.target.value)}
                                         inputMode="decimal"
                                     />
