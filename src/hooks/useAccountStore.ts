@@ -8,8 +8,8 @@ function load(): AccountData {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) return {...defaultAccountData, ...JSON.parse(raw)};
     } catch {
+        return {...defaultAccountData};
     }
-    return {...defaultAccountData};
 }
 
 function save(data: AccountData) {
@@ -43,7 +43,7 @@ export function useAccountStore() {
     const completeSetup = useCallback((totalBalance: number, interestRate: number, pots: {
         name: string;
         balance: number
-    }[]) => {
+    }[], nextInterestDate: string) => {
         update(d => ({
             ...d,
             totalBalance,
@@ -60,6 +60,7 @@ export function useAccountStore() {
                     description: 'Initial balance'
                 }]
             })),
+            nextInterestDate: nextInterestDate,
             setupComplete: true,
         }));
     }, [update]);
@@ -132,7 +133,7 @@ export function useAccountStore() {
             const {totalAmount, splits} = d.monthlyTransfer;
             if (totalAmount <= 0) return d;
             const now = new Date().toISOString();
-            let newPots = [...d.pots.map(p => ({...p, history: [...p.history]}))];
+            const newPots = [...d.pots.map(p => ({...p, history: [...p.history]}))];
 
             for (const split of splits) {
                 const pot = newPots.find(p => p.id === split.potId);
@@ -141,27 +142,7 @@ export function useAccountStore() {
                 pot.balance += amount;
                 pot.history.push({id: uid(), date: now, type: 'deposit', amount, description: 'Monthly transfer'});
             }
-
-            // Apply interest
-            const monthlyRate = d.interestRate / 100 / 12;
-            for (const pot of newPots) {
-                const interest = pot.balance * monthlyRate;
-                if (interest > 0) {
-                    pot.balance += interest;
-                    pot.history.push({
-                        id: uid(),
-                        date: now,
-                        type: 'interest',
-                        amount: interest,
-                        description: `Interest (${d.interestRate}% p.a.)`
-                    });
-                }
-            }
-
-            const newTotal = d.totalBalance + totalAmount + newPots.reduce((s, p) => {
-                const interestEntry = p.history.filter(h => h.date === now && h.type === 'interest');
-                return s + interestEntry.reduce((a, e) => a + e.amount, 0);
-            }, 0);
+            const newTotal = d.totalBalance + totalAmount
 
             return {...d, pots: newPots, totalBalance: newTotal, lastInterestDate: now};
         });
@@ -208,6 +189,74 @@ export function useAccountStore() {
         });
     }, [update]);
 
+    const checkAndApplyAnnualInterest = useCallback(() => {
+        update(d => {
+            if (!d.nextInterestDate) return d;
+            const now = new Date();
+            const nextInterest = new Date(d.nextInterestDate);
+            if (now < nextInterest) return d;
+
+            // Apply interest to all pots
+            const annualRate = d.interestRate / 100;
+            const interest = d.totalBalance * annualRate;
+            const newAmount = d.totalBalance + interest;
+
+            // Set next interest date to one year later
+            const nextYear = new Date(nextInterest);
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+
+            return {
+                ...d,
+                totalBalance: newAmount,
+                nextInterestDate: nextYear.toISOString(),
+            };
+        });
+    }, [update]);
+
+    const setLastMonthlyTransferDate = useCallback((date: string) => {
+        update(d => ({...d, lastMonthlyTransferDate: date}));
+    }, [update]);
+
+    const triggerMonthlyTransferIfDue = useCallback(() => {
+        update(d => {
+            if (!d.lastMonthlyTransferDate) return d;
+            const last = new Date(d.lastMonthlyTransferDate);
+            const now = new Date()
+            now.setDate(1)
+            if (now.getFullYear() === last.getFullYear() && now.getMonth() === last.getMonth()) {
+                return d; // Already processed this month
+            }
+            const multiplier = (now.getFullYear() - last.getFullYear()) * 12 + (now.getMonth() - last.getMonth());
+            // Process transfer
+            const {totalAmount, splits} = d.monthlyTransfer;
+            if (totalAmount <= 0) return d;
+            const newPots = [...d.pots.map(p => ({...p, history: [...p.history]}))];
+
+            for (let i = 0; i < multiplier; i++) {
+                if (last.getMonth() + 1 + i > 11) {
+                    checkAndApplyAnnualInterest()
+                }
+                for (const split of splits) {
+                    const pot = newPots.find(p => p.id === split.potId);
+                    if (!pot) continue;
+                    const amount = split.type === 'fixed' ? split.value : totalAmount * (split.value / 100);
+                    pot.balance += amount;
+
+                    pot.history.push({
+                        id: uid(),
+                        date: new Date(last.getFullYear(), last.getMonth() + i + 1, 1).toISOString(),
+                        type: 'deposit',
+                        amount,
+                        description: 'Monthly transfer'
+                    });
+                }
+            }
+            const newTotal = d.totalBalance + totalAmount
+
+            return {...d, pots: newPots, totalBalance: newTotal, lastMonthlyTransferDate: now.toISOString()};
+        });
+    }, [update, checkAndApplyAnnualInterest]);
+
     const resetAll = useCallback(() => {
         setData({...defaultAccountData});
     }, []);
@@ -218,7 +267,8 @@ export function useAccountStore() {
         addPot, updatePot, deletePot,
         setMonthlyTransfer, processMonthlyTransfer,
         addWithdrawal, deleteWithdrawal, processWithdrawal,
-        resetAll,
+        checkAndApplyAnnualInterest, setLastMonthlyTransferDate,
+        resetAll, triggerMonthlyTransferIfDue
     };
 }
 

@@ -11,9 +11,17 @@ interface Props {
     data: AccountData;
     setMonthlyTransfer: (total: number, splits: SplitRule[]) => void;
     processMonthlyTransfer: () => void;
+    setLastTransferDate: (date: string) => void;
 }
 
-export function MonthlyTransferSheet({open, onClose, data, setMonthlyTransfer, processMonthlyTransfer}: Props) {
+export function MonthlyTransferSheet({
+                                         open,
+                                         onClose,
+                                         data,
+                                         setMonthlyTransfer,
+                                         processMonthlyTransfer,
+                                         setLastTransferDate
+                                     }: Props) {
     const [total, setTotal] = useState(data.monthlyTransfer.totalAmount.toString());
     const [splits, setSplits] = useState<SplitRule[]>(data.monthlyTransfer.splits);
 
@@ -39,6 +47,11 @@ export function MonthlyTransferSheet({open, onClose, data, setMonthlyTransfer, p
     const splitSum = splits.reduce((s, r) => s + (r.type === 'fixed' ? r.value : totalAmount * (r.value / 100)), 0);
 
     const save = () => {
+        if (!data.lastMonthlyTransferDate) {
+            const now = new Date()
+            now.setDate(1)
+            setLastTransferDate(now.toISOString());
+        }
         setMonthlyTransfer(totalAmount, splits);
     };
 

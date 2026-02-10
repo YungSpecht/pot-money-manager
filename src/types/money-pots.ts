@@ -43,6 +43,8 @@ export interface AccountData {
     scheduledWithdrawals: ScheduledWithdrawal[];
     setupComplete: boolean;
     lastInterestDate?: string;
+    nextInterestDate?: string;
+    lastMonthlyTransferDate?: string;
 }
 
 export const defaultAccountData: AccountData = {

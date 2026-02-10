@@ -25,6 +25,7 @@ interface DashboardProps {
     deleteWithdrawal: (id: string) => void;
     processWithdrawal: (id: string) => void;
     resetAll: () => void;
+    setLastMonthlyTransferDate: (date: string) => void;
 }
 
 export function Dashboard(props: DashboardProps) {
@@ -181,6 +182,7 @@ export function Dashboard(props: DashboardProps) {
                 data={data}
                 setMonthlyTransfer={props.setMonthlyTransfer}
                 processMonthlyTransfer={props.processMonthlyTransfer}
+                setLastTransferDate={props.setLastMonthlyTransferDate}
             />
             <WithdrawalSheet
                 open={showWithdrawals}

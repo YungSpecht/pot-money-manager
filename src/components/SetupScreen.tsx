@@ -10,13 +10,17 @@ interface PotInput {
 }
 
 interface SetupScreenProps {
-    onComplete: (totalBalance: number, interestRate: number, pots: { name: string; balance: number }[]) => void;
+    onComplete: (totalBalance: number, interestRate: number, pots: {
+        name: string;
+        balance: number
+    }[], interestDate: string) => void;
 }
 
 export function SetupScreen({onComplete}: SetupScreenProps) {
     const [step, setStep] = useState(0);
     const [totalBalance, setTotalBalance] = useState('');
     const [interestRate, setInterestRate] = useState('');
+    const [interestDate, setInterestDate] = useState('');
     const [pots, setPots] = useState<PotInput[]>([{name: '', balance: ''}]);
 
     const addPot = () => setPots(p => [...p, {name: '', balance: ''}]);
@@ -34,7 +38,7 @@ export function SetupScreen({onComplete}: SetupScreenProps) {
         onComplete(balance, parseFloat(interestRate) || 0, validPots.map(p => ({
             name: p.name.trim(),
             balance: parseFloat(p.balance) || 0
-        })));
+        })), interestDate);
     };
 
     return (
@@ -55,14 +59,22 @@ export function SetupScreen({onComplete}: SetupScreenProps) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Total Account Balance</label>
+                                <label className="text-sm font-medium">Total Account Balance (€)</label>
                                 <Input type="number" placeholder="0.00" value={totalBalance}
                                        onChange={e => setTotalBalance(e.target.value)} inputMode="decimal"/>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Annual Interest Rate (%)</label>
-                                <Input type="number" placeholder="2.5" value={interestRate}
+                                <Input type="number" placeholder="0.0" value={interestRate}
                                        onChange={e => setInterestRate(e.target.value)} inputMode="decimal" step="0.01"/>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Interest Application Date</label>
+                                <Input
+                                    type="date"
+                                    value={interestDate}
+                                    onChange={e => setInterestDate(e.target.value)}
+                                />
                             </div>
                             <Button className="w-full" onClick={() => setStep(1)} disabled={!balance}>
                                 Next
